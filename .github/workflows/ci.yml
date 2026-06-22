@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .sdk
-          key: ${{ env.OPENWRT_SDK_CACHE_KEY }}
+          key: ${{ env.OPENWRT_SDK_CACHE_KEY }}-${{ env.OPENWRT_SDK_SHA256 }}
 
       - name: Build apk
         id: build
@@ -125,7 +125,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .sdk
-          key: ${{ env.OPENWRT_SDK_CACHE_KEY }}
+          key: ${{ env.OPENWRT_SDK_CACHE_KEY }}-${{ env.OPENWRT_SDK_SHA256 }}
 
       - name: Build apk
         id: build
@@ -149,7 +149,8 @@ jobs:
           TAG="${GITHUB_REF#refs/tags/}"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             case "$TAG" in
-              *-rc*|*-alpha*|*-beta*|*-pre*) PRE=--prerelease ;;
+              # Semver: any tag with a hyphen is a pre-release (rc/alpha/beta/dev/...).
+              *-*) PRE=--prerelease ;;
               *) PRE= ;;
             esac
             chmod +x scripts/release-notes.sh

@@ -85,9 +85,13 @@ if ! grep -q '^CONFIG_PACKAGE_luci-app-uapi=y' .config; then
 	exit 1
 fi
 
+# Drop any apk left in bin/ by a previous (cached) build so the version-pick
+# below cannot grab a stale artifact.
+find bin -name 'luci-app-uapi-*.apk' -delete 2>/dev/null || true
+
 make package/luci-app-uapi/compile V=s
 
-APK=$(find bin -name 'luci-app-uapi-*.apk' | head -1)
+APK=$(find bin -name 'luci-app-uapi-*.apk' | sort -V | tail -1)
 [ -n "$APK" ] || { echo "ERROR: no luci-app-uapi apk produced" >&2; exit 1; }
 APK_ABS="$SDK_DIR/$APK"
 

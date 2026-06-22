@@ -9,11 +9,11 @@ fail=0
 
 note() { printf '%s\n' "$*"; }
 
-# 1. House style: no em-dashes anywhere in tracked source/docs.
+# 1. House style: no em-dashes in any tracked file.
 EMDASH=$(printf '\xe2\x80\x94')
-if grep -rn "$EMDASH" \
-     --include='*.js' --include='*.uc' --include='*.json' --include='*.md' \
-     Makefile htdocs root scripts README.md CHANGELOG.md 2>/dev/null; then
+emhits=$(git ls-files -z | xargs -0 grep -nH "$EMDASH" 2>/dev/null || true)
+if [ -n "$emhits" ]; then
+	printf '%s\n' "$emhits"
 	note "FAIL: em-dash found (house style forbids em-dashes; use ': ' or '(...)')"
 	fail=1
 fi

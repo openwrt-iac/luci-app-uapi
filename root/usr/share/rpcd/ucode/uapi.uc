@@ -2,7 +2,7 @@
 
 'use strict';
 
-import { popen, stat, readfile, writefile, unlink } from 'fs';
+import { popen, stat, readfile, writefile, unlink, open } from 'fs';
 import { cursor } from 'uci';
 
 const TOKEN_CLI = '/usr/bin/uapi-token';
@@ -20,6 +20,33 @@ function as_list(v) {
 	if (v == null) return [];
 	if (type(v) == 'array') return v;
 	return [ v ];
+}
+
+function random_hex() {
+	const f = open('/dev/urandom', 'r');
+	if (!f) return null;
+	const raw = f.read(8);
+	f.close();
+	let hex = '';
+	for (let i = 0; i < length(raw); i++)
+		hex += sprintf('%02x', ord(raw, i));
+	return hex;
+}
+
+// Run the uapi-token CLI, capturing stdout and stderr separately. The stderr
+// file gets an unpredictable name because root opens it via the shell redirect:
+// a guessable path would let a local user pre-plant a symlink for root to
+// clobber, and would also collide between concurrent calls.
+function run_cli(cmd) {
+	const errfile = `/tmp/.luci-uapi.${random_hex() ?? time()}`;
+	const fd = popen(`${cmd} 2>${shellquote(errfile)}`);
+	if (!fd)
+		return { code: -1, out: '', err: 'Failed to launch uapi-token' };
+	const out = trim(fd.read('all'));
+	const code = fd.close();
+	const err = trim(readfile(errfile) ?? '');
+	unlink(errfile);
+	return { code, out, err };
 }
 
 // uhttpd forwards a hard-coded header allowlist to mod-ucode handlers, so we
@@ -118,8 +145,8 @@ const methods = {
 		},
 		call: function(req) {
 			const name = req.args?.name;
-			const scopes = as_list(req.args?.scopes);
-			const cidrs = as_list(req.args?.allowed_cidrs);
+			const scopes = filter(as_list(req.args?.scopes), (s) => length(`${s}`) > 0);
+			const cidrs = filter(as_list(req.args?.allowed_cidrs), (c) => length(`${c}`) > 0);
 			const expires = +req.args?.expires_in_seconds;
 
 			if (!name || !match(name, NAME_RE))
@@ -128,35 +155,16 @@ const methods = {
 				return { error: 'At least one scope is required' };
 
 			let cmd = `${TOKEN_CLI} create --name ${shellquote(name)}`;
-			for (let s in scopes) {
-				if (!length(`${s}`)) continue;
-				cmd += ` --scope ${shellquote(s)}`;
-			}
-			for (let c in cidrs) {
-				if (!length(`${c}`)) continue;
-				cmd += ` --allowed-cidr ${shellquote(c)}`;
-			}
-			if (expires > 0)
-				cmd += ` --expires-in ${shellquote(expires)}`;
-			if (req.args?.force)
-				cmd += ' --force';
+			for (let s in scopes) cmd += ` --scope ${shellquote(s)}`;
+			for (let c in cidrs) cmd += ` --allowed-cidr ${shellquote(c)}`;
+			if (expires > 0) cmd += ` --expires-in ${shellquote(expires)}`;
+			if (req.args?.force) cmd += ' --force';
 
-			// The CLI prints the cleartext bearer to stdout and a notice to
-			// stderr; on failure it dies with a message on stderr. Capture the
-			// two streams separately so we can surface either cleanly.
-			const errfile = `/tmp/.luci-uapi-create.${time()}`;
-			const fd = popen(`${cmd} 2>${shellquote(errfile)}`);
-			if (!fd)
-				return { error: 'Failed to launch uapi-token' };
-			const stdout = trim(fd.read('all'));
-			const code = fd.close();
-			const stderr = trim(readfile(errfile) ?? '');
-			unlink(errfile);
+			const r = run_cli(cmd);
+			if (r.code != 0 || !length(r.out))
+				return { error: length(r.err) ? r.err : `uapi-token exited ${r.code}` };
 
-			if (code != 0 || !length(stdout))
-				return { error: length(stderr) ? stderr : `uapi-token exited ${code}` };
-
-			return { bearer: stdout, name, message: stderr };
+			return { bearer: r.out, name };
 		}
 	},
 
@@ -167,17 +175,9 @@ const methods = {
 			if (!name || !match(name, NAME_RE))
 				return { error: 'Invalid token name' };
 
-			const errfile = `/tmp/.luci-uapi-revoke.${time()}`;
-			const fd = popen(`${TOKEN_CLI} revoke ${shellquote(name)} 2>${shellquote(errfile)}`);
-			if (!fd)
-				return { error: 'Failed to launch uapi-token' };
-			fd.read('all');
-			const code = fd.close();
-			const stderr = trim(readfile(errfile) ?? '');
-			unlink(errfile);
-
-			if (code != 0)
-				return { error: length(stderr) ? stderr : `uapi-token exited ${code}` };
+			const r = run_cli(`${TOKEN_CLI} revoke ${shellquote(name)}`);
+			if (r.code != 0)
+				return { error: length(r.err) ? r.err : `uapi-token exited ${r.code}` };
 			return { result: 'OK' };
 		}
 	},
@@ -189,7 +189,8 @@ const methods = {
 				if (writefile(INSECURE_MARKER, '') == null)
 					return { error: `Cannot create ${INSECURE_MARKER}` };
 			} else {
-				if (stat(INSECURE_MARKER) && !unlink(INSECURE_MARKER))
+				unlink(INSECURE_MARKER);
+				if (stat(INSECURE_MARKER))
 					return { error: `Cannot remove ${INSECURE_MARKER}` };
 			}
 			return { result: 'OK', insecure: !!stat(INSECURE_MARKER) };

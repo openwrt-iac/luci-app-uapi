@@ -3,6 +3,7 @@
 'require rpc';
 'require ui';
 'require dom';
+'require uapi.helpers as h';
 
 const callListTokens = rpc.declare({
 	object: 'luci.uapi',
@@ -21,18 +22,12 @@ const callRevokeToken = rpc.declare({
 	params: [ 'name' ]
 });
 
-// The valid scope tree is read from the installed uapi (its scope.uc), so the
-// picker always matches the uapi version present.
+// Valid scopes come from the installed uapi (uapi-token scopes), so the picker
+// matches whatever uapi version is present.
 const callListScopes = rpc.declare({
 	object: 'luci.uapi',
 	method: 'list_scopes'
 });
-
-function fmtTime(epoch) {
-	if (!epoch) return '-';
-	const d = new Date(epoch * 1000);
-	return d.toLocaleString();
-}
 
 return view.extend({
 	load: function () {
@@ -224,10 +219,11 @@ return view.extend({
 								ui.addNotification(null, E('p', {}, [ res.error ]), 'error');
 								return;
 							}
+							// Reveal the once-only bearer before anything that can
+							// fail; never gate it on the token-list refresh.
 							ui.hideModal();
-							return self.refresh().then(function () {
-								self.showBearer(res.name, res.bearer);
-							});
+							self.showBearer(res.name, res.bearer);
+							self.refresh();
 						}).catch(function (e) {
 							ui.addNotification(null, E('p', {}, [ _('Token creation failed: ') + e ]), 'error');
 						});
@@ -243,17 +239,14 @@ return view.extend({
 			return E('tr', { 'class': 'tr' }, [
 				E('td', { 'class': 'td' }, [
 					E('strong', {}, [ t.name ]),
-					t.expired ? E('span', {
-						'class': 'label',
-						'style': 'background-color:#da4f49;color:#fff;margin-left:.5em;padding:1px 6px;border-radius:3px'
-					}, [ _('expired') ]) : ''
+					t.expired ? E('span', { 'style': 'margin-left:.5em' }, [ h.warnBadge(_('expired')) ]) : ''
 				]),
 				E('td', { 'class': 'td' }, (t.scopes || []).map(function (s) {
 					return E('code', { 'style': 'margin-right:.4em' }, [ s ]);
 				})),
-				E('td', { 'class': 'td' }, [ t.expires_at ? fmtTime(t.expires_at) : _('never') ]),
+				E('td', { 'class': 'td' }, [ t.expires_at ? h.fmtTime(t.expires_at) : _('never') ]),
 				E('td', { 'class': 'td' }, [ (t.allowed_cidrs && t.allowed_cidrs.length) ? t.allowed_cidrs.join(', ') : _('any') ]),
-				E('td', { 'class': 'td' }, [ t.last_used_at ? fmtTime(t.last_used_at) + (t.last_used_ip ? ' (' + t.last_used_ip + ')' : '') : _('never') ]),
+				E('td', { 'class': 'td' }, [ t.last_used_at ? h.fmtTime(t.last_used_at) + (t.last_used_ip ? ' (' + t.last_used_ip + ')' : '') : _('never') ]),
 				E('td', { 'class': 'td right' }, [
 					E('button', {
 						'class': 'btn cbi-button-negative',
@@ -285,7 +278,9 @@ return view.extend({
 		return callListTokens().then(function (res) {
 			const container = document.getElementById('uapi-tokens');
 			if (container)
-				dom.content(container, self.renderTable(res.tokens));
+				dom.content(container, self.renderTable((res || {}).tokens));
+		}).catch(function (e) {
+			ui.addNotification(null, E('p', {}, [ _('Failed to load tokens: ') + e ]), 'error');
 		});
 	},
 

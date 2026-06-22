@@ -3,6 +3,7 @@
 'require rpc';
 'require ui';
 'require dom';
+'require uapi.helpers as h';
 
 const callStatus = rpc.declare({
 	object: 'luci.uapi',
@@ -15,28 +16,6 @@ const callSetInsecure = rpc.declare({
 	params: [ 'enable' ]
 });
 
-function badge(ok, yes, no) {
-	return E('span', {
-		'class': 'label',
-		'style': 'background-color:%s;color:#fff;padding:2px 8px;border-radius:3px'
-			.format(ok ? '#5bb75b' : '#999')
-	}, [ ok ? (yes || _('Yes')) : (no || _('No')) ]);
-}
-
-function warnBadge(text) {
-	return E('span', {
-		'class': 'label',
-		'style': 'background-color:#da4f49;color:#fff;padding:2px 8px;border-radius:3px'
-	}, [ text ]);
-}
-
-function row(label, value) {
-	return E('tr', { 'class': 'tr' }, [
-		E('td', { 'class': 'td left', 'width': '33%' }, [ label ]),
-		E('td', { 'class': 'td left' }, [ value ])
-	]);
-}
-
 return view.extend({
 	load: function () {
 		return callStatus();
@@ -44,12 +23,12 @@ return view.extend({
 
 	renderService: function (st) {
 		const rows = [
-			row(_('Handler installed'), badge(!!st.installed)),
-			row(_('API version'), st.version ? E('strong', {}, [ st.version ]) : _('Unknown')),
-			row(_('Wired into uhttpd'), st.wired
-				? badge(true)
-				: warnBadge(_('No: run the package install hook'))),
-			row(_('Active tokens'), E('span', {
+			h.row(_('Handler installed'), h.badge(!!st.installed)),
+			h.row(_('API version'), st.version ? E('strong', {}, [ st.version ]) : _('Unknown')),
+			h.row(_('Wired into uhttpd'), st.wired
+				? h.badge(true)
+				: h.warnBadge(_('No: run the package install hook'))),
+			h.row(_('Active tokens'), E('span', {
 				'style': 'display:inline-flex;align-items:center;gap:.75em'
 			}, [
 				E('strong', {}, [ '' + (st.token_count || 0) ]),
@@ -85,13 +64,13 @@ return view.extend({
 		}, [ st.insecure ? _('Remove insecure marker') : _('Create insecure marker') ]);
 
 		const rows = [
-			row(_('HTTPS listener'), httpsOn
-				? badge(true, _('Enabled'))
-				: warnBadge(_('Not configured'))),
-			row(_('Insecure HTTP bypass'), st.insecure
-				? warnBadge(_('ACTIVE: /etc/uapi.insecure present'))
-				: badge(false, '', _('Off'))),
-			row('', insecureBtn)
+			h.row(_('HTTPS listener'), httpsOn
+				? h.badge(true, _('Enabled'))
+				: h.warnBadge(_('Not configured'))),
+			h.row(_('Insecure HTTP bypass'), st.insecure
+				? h.warnBadge(_('ACTIVE: /etc/uapi.insecure present'))
+				: h.badge(false, '', _('Off'))),
+			h.row('', insecureBtn)
 		];
 
 		return E('div', { 'class': 'cbi-section' }, [
@@ -115,6 +94,8 @@ return view.extend({
 				self.renderService(st),
 				self.renderSecurity(st)
 			]);
+		}).catch(function (e) {
+			ui.addNotification(null, E('p', {}, [ _('Failed to load status: ') + e ]), 'error');
 		});
 	},
 
