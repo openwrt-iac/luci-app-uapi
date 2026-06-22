@@ -87,16 +87,24 @@ const methods = {
 		}
 	},
 
-	// Authoritative scope list. uapi does not yet expose its scope tree through a
-	// sanctioned interface (KNOWN_PATHS in scope.uc is module-private and
-	// openapi.json does not enumerate scopes), and parsing the source file is too
-	// brittle to rely on. Tracked upstream at
-	// https://github.com/openwrt-iac/uapi/issues/5; once uapi ships a CLI/export,
-	// fetch it here. Until then this returns empty and the token form falls back
-	// to a free-text scope field.
+	// Authoritative scope list from the uapi-token CLI (uapi 2.3.0+, see
+	// openwrt-iac/uapi#5): `uapi-token scopes` prints one scope path per line.
+	// On older uapi the subcommand is unknown and exits non-zero, so we return
+	// empty and the token form falls back to a free-text scope field. No source
+	// parsing.
 	list_scopes: {
 		call: function() {
-			return { scopes: [] };
+			const fd = popen(`${TOKEN_CLI} scopes 2>/dev/null`);
+			if (!fd) return { scopes: [] };
+			const out = fd.read('all');
+			const code = fd.close();
+			if (code != 0) return { scopes: [] };
+			const scopes = [];
+			for (let line in split(out, '\n')) {
+				const s = trim(line);
+				if (length(s)) push(scopes, s);
+			}
+			return { scopes };
 		}
 	},
 
