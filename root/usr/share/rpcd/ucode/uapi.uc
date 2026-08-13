@@ -82,7 +82,9 @@ function token_sections(uci) {
 			expired: (expires_at != null) ? (expires_at <= now) : false,
 			allowed_cidrs: as_list(s.allowed_cidrs),
 			last_used_at: s.last_used_at ? +s.last_used_at : null,
-			last_used_ip: s.last_used_ip ?? null
+			last_used_ip: s.last_used_ip ?? null,
+			rate: s.rate ? +s.rate : null,
+			burst: s.burst ? +s.burst : null
 		});
 	});
 	return tokens;
@@ -150,6 +152,8 @@ const methods = {
 			scopes: [],
 			expires_in_seconds: 0,
 			allowed_cidrs: [],
+			rate: 0,
+			burst: 0,
 			force: false
 		},
 		call: function(req) {
@@ -157,6 +161,10 @@ const methods = {
 			const scopes = filter(as_list(req.args?.scopes), (s) => length(`${s}`) > 0);
 			const cidrs = filter(as_list(req.args?.allowed_cidrs), (c) => length(`${c}`) > 0);
 			const expires = +req.args?.expires_in_seconds;
+			// Per-token rate limit (uapi 3.0.0+). Omitted when unset, so the
+			// request stays valid against an older CLI that lacks the flags.
+			const rate = +req.args?.rate;
+			const burst = +req.args?.burst;
 
 			if (!name || !match(name, NAME_RE))
 				return { error: 'Invalid name: must match [A-Za-z0-9_]+ (use underscores, not hyphens)' };
@@ -167,6 +175,8 @@ const methods = {
 			for (let s in scopes) cmd += ` --scope ${shellquote(s)}`;
 			for (let c in cidrs) cmd += ` --allowed-cidr ${shellquote(c)}`;
 			if (expires > 0) cmd += ` --expires-in ${shellquote(expires)}`;
+			if (rate > 0) cmd += ` --rate ${shellquote(rate)}`;
+			if (burst > 0) cmd += ` --burst ${shellquote(burst)}`;
 			if (req.args?.force) cmd += ' --force';
 
 			const r = run_cli(cmd);

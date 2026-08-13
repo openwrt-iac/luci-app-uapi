@@ -15,9 +15,10 @@ Under **Services -> uAPI**:
   (and which major it serves, `/api/v2` or `/api/v3`), active token count, the
   HTTPS-listener and insecure-bypass posture, plus a button to create/remove the
   `/etc/uapi.insecure` marker.
-- **Tokens** -- list tokens (scopes, expiry, allowed CIDRs, last use), create a
-  token (name, scope picker, expiry, source-CIDR pinning, force), and revoke.
-  Token creation shells out to `uapi-token`; the cleartext bearer is shown once.
+- **Tokens** -- list tokens (scopes, expiry, allowed CIDRs, rate limit, last
+  use), create a token (name, scope picker, expiry, source-CIDR pinning, and an
+  optional per-token rate/burst override on uapi 3.0.0+), and revoke. Token
+  creation shells out to `uapi-token`; the cleartext bearer is shown once.
 - **Settings** -- UCI form over `/etc/config/uapi`: logging (access/debug) and
   rate limiting (rate/burst). Token sections in the same file are left untouched.
 

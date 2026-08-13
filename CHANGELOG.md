@@ -9,6 +9,17 @@ never because uapi was bumped. See README "Versioning".
 
 ## [Unreleased]
 
+## [1.1.0]
+
+Compatible with uapi 2.x and 3.x.
+
+### Added
+
+- Per-token rate limit on the token create form: optional `rate` and `burst`
+  overrides of the global limit (uapi 3.0.0+), shown as a column in the token
+  table. Left blank the flags are omitted, so the form still works against a
+  uapi that predates them.
+
 ### Fixed
 
 - Detect the mounted API major (`/api/v2`, `/api/v3`, later) instead of matching

@@ -13,7 +13,7 @@ const callListTokens = rpc.declare({
 const callCreateToken = rpc.declare({
 	object: 'luci.uapi',
 	method: 'create_token',
-	params: [ 'name', 'scopes', 'expires_in_seconds', 'allowed_cidrs', 'force' ]
+	params: [ 'name', 'scopes', 'expires_in_seconds', 'allowed_cidrs', 'rate', 'burst', 'force' ]
 });
 
 const callRevokeToken = rpc.declare({
@@ -114,6 +114,8 @@ return view.extend({
 			E('option', { 'value': '1' }, [ _('seconds') ])
 		]);
 		const cidrEl = E('input', { 'type': 'text', 'class': 'cbi-input-text', 'style': 'width:100%', 'placeholder': '10.0.0.0/24, 192.168.1.0/24' });
+		const rateEl = E('input', { 'type': 'number', 'min': '0', 'class': 'cbi-input-text', 'style': 'width:7em', 'placeholder': _('default') });
+		const burstEl = E('input', { 'type': 'number', 'min': '0', 'class': 'cbi-input-text', 'style': 'width:7em', 'placeholder': _('default') });
 
 		function splitList(s) {
 			return (s || '').split(/[\s,]+/).filter(function (x) { return x.length; });
@@ -194,6 +196,18 @@ return view.extend({
 				])
 			]),
 			field(_('Allowed source CIDRs'), cidrEl, _('Optional, space- or comma-separated. Restrict the token to these source networks.')),
+			E('div', { 'class': 'cbi-value' }, [
+				E('label', { 'class': 'cbi-value-title' }, [ _('Rate limit') ]),
+				E('div', { 'class': 'cbi-value-field' }, [
+					E('div', { 'style': 'display:flex;gap:.5em;align-items:center' }, [
+						E('span', {}, [ _('rate') ]), rateEl,
+						E('span', {}, [ _('req/s, burst') ]), burstEl
+					]),
+					E('div', { 'class': 'cbi-value-description' }, [
+						_('Optional per-token override of the global rate limit (uapi 3.0.0+). Leave blank to use the Settings value.')
+					])
+				])
+			]),
 			E('div', { 'class': 'right' }, [
 				E('button', { 'class': 'btn', 'click': ui.hideModal }, [ _('Cancel') ]),
 				' ',
@@ -214,7 +228,10 @@ return view.extend({
 							return;
 						}
 
-						return callCreateToken(name, scopes, expires, cidrs, false).then(function (res) {
+						const rate = parseInt(rateEl.value, 10) || 0;
+						const burst = parseInt(burstEl.value, 10) || 0;
+
+						return callCreateToken(name, scopes, expires, cidrs, rate, burst, false).then(function (res) {
 							if (res && res.error) {
 								ui.addNotification(null, E('p', {}, [ res.error ]), 'error');
 								return;
@@ -246,6 +263,9 @@ return view.extend({
 				})),
 				E('td', { 'class': 'td' }, [ t.expires_at ? h.fmtTime(t.expires_at) : _('never') ]),
 				E('td', { 'class': 'td' }, [ (t.allowed_cidrs && t.allowed_cidrs.length) ? t.allowed_cidrs.join(', ') : _('any') ]),
+				E('td', { 'class': 'td' }, [ (t.rate || t.burst)
+					? '%s/%s'.format(t.rate || _('default'), t.burst || _('default'))
+					: _('default') ]),
 				E('td', { 'class': 'td' }, [ t.last_used_at ? h.fmtTime(t.last_used_at) + (t.last_used_ip ? ' (' + t.last_used_ip + ')' : '') : _('never') ]),
 				E('td', { 'class': 'td right' }, [
 					E('button', {
@@ -258,7 +278,7 @@ return view.extend({
 
 		if (!rows.length)
 			rows.push(E('tr', { 'class': 'tr placeholder' }, [
-				E('td', { 'class': 'td', 'colspan': 6 }, [ _('No tokens yet. Create one to start using the API.') ])
+				E('td', { 'class': 'td', 'colspan': 7 }, [ _('No tokens yet. Create one to start using the API.') ])
 			]));
 
 		return E('table', { 'class': 'table' }, [
@@ -267,6 +287,7 @@ return view.extend({
 				E('th', { 'class': 'th' }, [ _('Scopes') ]),
 				E('th', { 'class': 'th' }, [ _('Expires') ]),
 				E('th', { 'class': 'th' }, [ _('Allowed CIDRs') ]),
+				E('th', { 'class': 'th' }, [ _('Rate limit') ]),
 				E('th', { 'class': 'th' }, [ _('Last used') ]),
 				E('th', { 'class': 'th right' }, [ _('Actions') ])
 			])
