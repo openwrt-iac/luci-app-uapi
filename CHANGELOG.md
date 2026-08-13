@@ -9,6 +9,13 @@ never because uapi was bumped. See README "Versioning".
 
 ## [Unreleased]
 
+### Fixed
+
+- Detect the mounted API major (`/api/v2`, `/api/v3`, later) instead of matching
+  the v2 prefix literally, and show it on the Status page. uapi 3.0.0 moves the
+  uhttpd mount to `/api/v3`, which made "Wired into uhttpd" report No on an
+  otherwise correctly wired 3.x router.
+
 ## [1.0.0]
 
 Initial release. Compatible with uapi 2.x.

@@ -26,7 +26,7 @@ return view.extend({
 			h.row(_('Handler installed'), h.badge(!!st.installed)),
 			h.row(_('API version'), st.version ? E('strong', {}, [ st.version ]) : _('Unknown')),
 			h.row(_('Wired into uhttpd'), st.wired
-				? h.badge(true)
+				? h.badge(true, _('Yes, at /api/%s').format(st.api_major))
 				: h.warnBadge(_('No: run the package install hook'))),
 			h.row(_('Active tokens'), E('span', {
 				'style': 'display:inline-flex;align-items:center;gap:.75em'

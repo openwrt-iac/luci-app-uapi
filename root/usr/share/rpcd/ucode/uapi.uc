@@ -9,7 +9,10 @@ const TOKEN_CLI = '/usr/bin/uapi-token';
 const HANDLER = '/usr/share/uapi/main.uc';
 const OPENAPI = '/usr/share/uapi/openapi.json';
 const INSECURE_MARKER = '/etc/uapi.insecure';
-const PREFIX_ENTRY = '/api/v2=/usr/share/uapi/main.uc';
+// uapi mounts one API major per installation and the prefix tracks it
+// (/api/v2 for uapi 2.x, /api/v3 for 3.x), so match the major rather than a
+// literal string: this reports the actual mount instead of breaking on upgrade.
+const PREFIX_RE = /^\/api\/(v[0-9]+)=\/usr\/share\/uapi\/main\.uc$/;
 const NAME_RE = /^[A-Za-z0-9_]+$/;
 
 function shellquote(s) {
@@ -90,10 +93,16 @@ const methods = {
 		call: function() {
 			const uci = cursor();
 			const entries = prefix_entries(uci);
+			let api_major = null;
+			for (let e in entries) {
+				const m = match(e, PREFIX_RE);
+				if (m) { api_major = m[1]; break; }
+			}
 			const result = {
 				installed: !!stat(HANDLER),
 				version: read_version(),
-				wired: (PREFIX_ENTRY in entries),
+				wired: (api_major != null),
+				api_major,
 				prefix_entries: entries,
 				token_count: length(token_sections(uci)),
 				insecure: !!stat(INSECURE_MARKER),

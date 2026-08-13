@@ -11,9 +11,10 @@ and there is no login flow.
 Under **Services -> uAPI**:
 
 - **Status** -- handler installed, contract version (read from the shipped
-  `/usr/share/uapi/openapi.json`), whether the `/api/v2` prefix is wired into
-  uhttpd, active token count, the HTTPS-listener and insecure-bypass posture,
-  plus a button to create/remove the `/etc/uapi.insecure` marker.
+  `/usr/share/uapi/openapi.json`), whether the API prefix is wired into uhttpd
+  (and which major it serves, `/api/v2` or `/api/v3`), active token count, the
+  HTTPS-listener and insecure-bypass posture, plus a button to create/remove the
+  `/etc/uapi.insecure` marker.
 - **Tokens** -- list tokens (scopes, expiry, allowed CIDRs, last use), create a
   token (name, scope picker, expiry, source-CIDR pinning, force), and revoke.
   Token creation shells out to `uapi-token`; the cleartext bearer is shown once.
@@ -80,10 +81,11 @@ version bump here.
 - **PATCH**: app bug fixes.
 
 The app is a thin local manager, so its compatibility with uapi is broad and is
-expressed by the `+uapi` dependency, not by the version number. It currently
-works with uapi 2.x (the `/api/v2` prefix it checks, the v2 scope tree it
-suggests, and the `uapi-token` CLI / `/etc/config/uapi` schema it drives). If a
-future uapi makes a breaking change to that local surface, the app that handles
+expressed by the `+uapi` dependency, not by the version number. It works with
+uapi **2.x and 3.x**: it drives the `uapi-token` CLI and the `/etc/config/uapi`
+schema, offers the scope tree the installed uapi reports, and detects whichever
+API major is mounted (`/api/v2`, `/api/v3`, or a later one) rather than assuming
+a fixed prefix. If a future uapi breaks that local surface, the app that handles
 it ships as a normal release and, if enforcement is needed, gains a
 version-constrained dependency (`+uapi (>= x.y.z)`, which OpenWrt supports).
 
