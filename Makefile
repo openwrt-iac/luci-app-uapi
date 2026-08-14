@@ -16,7 +16,7 @@ PKG_RELEASE:=1
 
 PKG_LICENSE:=MIT
 PKG_LICENSE_FILES:=LICENSE
-PKG_MAINTAINER:=Guy Godfroy <openwrt-iac@gugod.fr>
+PKG_MAINTAINER:=Guy Godfroy <guy.godfroy@gugod.fr>
 
 include ../../luci.mk
 
