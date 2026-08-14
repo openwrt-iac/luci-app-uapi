@@ -15,7 +15,8 @@ PKG_VERSION:=$(shell sed -n '1p' $(CURDIR)/VERSION)
 PKG_RELEASE:=1
 
 PKG_LICENSE:=MIT
-PKG_MAINTAINER:=Guy Godfroy <guy.godfroy@ovhcloud.com>
+PKG_LICENSE_FILES:=LICENSE
+PKG_MAINTAINER:=Guy Godfroy <openwrt-iac@gugod.fr>
 
 include ../../luci.mk
 
