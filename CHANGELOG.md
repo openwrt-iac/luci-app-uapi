@@ -18,10 +18,16 @@ Compatible with uapi 2.x and 3.x. No change to the app itself.
 - Ships the MIT license the package has always declared. `PKG_LICENSE:=MIT` was set
   with no `LICENSE` file in the repository, so the project read as unlicensed to
   anyone evaluating it, and `PKG_LICENSE_FILES` had nothing to point at.
-- The package maintainer address is now `guy.godfroy@gugod.fr`, matching the other
-  projects in the org rather than carrying a personal work address into every
-  package index and SBOM that lists this app. Conduct reports go to the org
-  address in `CODE_OF_CONDUCT.md`; the package maintainer is a person.
+- The package maintainer address is now `guy.godfroy@gugod.fr` rather than a work
+  address, in every package index and SBOM that lists this app. It is set through
+  `LUCI_MAINTAINER`: the LuCI build include assigns the package's maintainer field
+  from that variable alone, so the `PKG_MAINTAINER` used before was dropped and the
+  app shipped as "OpenWrt LuCI community". Conduct reports go to the org address in
+  `CODE_OF_CONDUCT.md`; the package maintainer is a person.
+- A moved tag no longer leaves its release unpublished. Deleting a tag reverts its
+  GitHub release to a draft, and the release job could not tell a draft apart from a
+  published release, so it attached the rebuilt package to a release nobody could
+  see and the package feed kept serving the previous version.
 
 ### Added
 
