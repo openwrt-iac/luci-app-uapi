@@ -18,9 +18,10 @@ Compatible with uapi 2.x and 3.x. No change to the app itself.
 - Ships the MIT license the package has always declared. `PKG_LICENSE:=MIT` was set
   with no `LICENSE` file in the repository, so the project read as unlicensed to
   anyone evaluating it, and `PKG_LICENSE_FILES` had nothing to point at.
-- The package maintainer address is now `openwrt-iac@gugod.fr`, matching the other
+- The package maintainer address is now `guy.godfroy@gugod.fr`, matching the other
   projects in the org rather than carrying a personal work address into every
-  package index and SBOM that lists this app.
+  package index and SBOM that lists this app. Conduct reports go to the org
+  address in `CODE_OF_CONDUCT.md`; the package maintainer is a person.
 
 ### Added
 
