@@ -162,3 +162,7 @@ jobs:
             fi
           fi
           gh release upload "$TAG" "${{ steps.build.outputs.apk }}" --clobber
+          # Deleting a tag in order to move it reverts its release to a draft, and
+          # `gh release view` succeeds on a draft, so the create branch above is skipped
+          # and the rebuilt apk lands in a release nobody can see or download.
+          gh release edit "$TAG" --draft=false
