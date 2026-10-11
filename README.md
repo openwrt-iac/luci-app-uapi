@@ -22,6 +22,16 @@ Under **Services -> uAPI**:
 - **Settings** -- UCI form over `/etc/config/uapi`: logging (access/debug) and
   rate limiting (rate/burst). Token sections in the same file are left untouched.
 
+## Screenshots
+
+OpenWrt 25.12.5 with uapi 3.1.0 and three example tokens.
+
+![Status page](docs/screenshots/status.png)
+
+![Tokens page](docs/screenshots/tokens.png)
+
+![Settings page](docs/screenshots/settings.png)
+
 ## Architecture
 
 - `htdocs/luci-static/resources/view/uapi/*.js` -- client-side views.
