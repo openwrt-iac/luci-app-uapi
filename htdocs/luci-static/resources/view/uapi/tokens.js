@@ -40,11 +40,7 @@ return view.extend({
 	revoke: function (name) {
 		const self = this;
 		ui.showModal(_('Revoke token'), [
-			E('p', {}, [
-				_('Permanently revoke token '),
-				E('strong', {}, [ name ]),
-				_('? Any client using it will be denied immediately.')
-			]),
+			E('p', {}, _('Permanently revoke token <strong>%h</strong>? Any client using it will be denied immediately.').format(name)),
 			E('div', { 'class': 'right' }, [
 				E('button', {
 					'class': 'btn',
@@ -68,11 +64,7 @@ return view.extend({
 
 	showBearer: function (name, bearer) {
 		ui.showModal(_('Token created'), [
-			E('p', {}, [
-				_('Token '),
-				E('strong', {}, [ name ]),
-				_(' was created. Copy the bearer value now: it is shown only once and cannot be retrieved again.')
-			]),
+			E('p', {}, _('Token <strong>%h</strong> was created. Copy the bearer value now: it is shown only once and cannot be retrieved again.').format(name)),
 			E('div', { 'class': 'cbi-section' }, [
 				E('textarea', {
 					'readonly': 'readonly',
@@ -242,7 +234,7 @@ return view.extend({
 							self.showBearer(res.name, res.bearer);
 							self.refresh();
 						}).catch(function (e) {
-							ui.addNotification(null, E('p', {}, [ _('Token creation failed: ') + e ]), 'error');
+							ui.addNotification(null, E('p', {}, [ _('Token creation failed: %s').format(e) ]), 'error');
 						});
 					})
 				}, [ _('Create') ])
@@ -301,7 +293,7 @@ return view.extend({
 			if (container)
 				dom.content(container, self.renderTable((res || {}).tokens));
 		}).catch(function (e) {
-			ui.addNotification(null, E('p', {}, [ _('Failed to load tokens: ') + e ]), 'error');
+			ui.addNotification(null, E('p', {}, [ _('Failed to load tokens: %s').format(e) ]), 'error');
 		});
 	},
 

@@ -95,7 +95,7 @@ return view.extend({
 				self.renderSecurity(st)
 			]);
 		}).catch(function (e) {
-			ui.addNotification(null, E('p', {}, [ _('Failed to load status: ') + e ]), 'error');
+			ui.addNotification(null, E('p', {}, [ _('Failed to load status: %s').format(e) ]), 'error');
 		});
 	},
 
