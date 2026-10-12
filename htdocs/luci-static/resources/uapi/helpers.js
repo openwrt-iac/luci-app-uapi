@@ -8,18 +8,11 @@ return baseclass.extend({
 	},
 
 	badge: function (ok, yes, no) {
-		return E('span', {
-			'class': 'label',
-			'style': 'background-color:%s;color:#fff;padding:2px 8px;border-radius:3px'
-				.format(ok ? '#5bb75b' : '#999')
-		}, [ ok ? (yes || _('Yes')) : (no || _('No')) ]);
+		return E('span', { 'class': ok ? 'label success' : 'label' }, [ ok ? (yes || _('Yes')) : (no || _('No')) ]);
 	},
 
 	warnBadge: function (text) {
-		return E('span', {
-			'class': 'label',
-			'style': 'background-color:#da4f49;color:#fff;padding:2px 8px;border-radius:3px'
-		}, [ text ]);
+		return E('span', { 'class': 'label warning' }, [ text ]);
 	},
 
 	row: function (label, value) {

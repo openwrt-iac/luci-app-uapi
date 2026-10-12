@@ -9,6 +9,16 @@ never because uapi was bumped. See README "Versioning".
 
 ## [Unreleased]
 
+### Fixed
+
+- Sentences that wrapped a token name or an error are now one translatable string
+  with a placeholder, so a translation can put the name or the error where its
+  language needs it. Before, translators got fragments such as `? Any client using
+  it will be denied immediately.`, and the template lost their edge spaces.
+- Status badges use the theme's `label success` and `label warning` classes
+  instead of fixed inline colors, so they follow the active theme and its dark
+  mode. `label warning` is styled by all four themes that ship with LuCI.
+
 ## [1.1.1]
 
 Compatible with uapi 2.x and 3.x. No change to the app itself.
