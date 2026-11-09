@@ -1,8 +1,6 @@
-#!/usr/bin/env ucode
-
 'use strict';
 
-import { popen, stat, readfile, writefile, unlink, open } from 'fs';
+import { popen, stat, readfile, writefile, unlink } from 'fs';
 import { cursor } from 'uci';
 
 const TOKEN_CLI = '/usr/bin/uapi-token';
@@ -25,31 +23,18 @@ function as_list(v) {
 	return [ v ];
 }
 
-function random_hex() {
-	const f = open('/dev/urandom', 'r');
-	if (!f) return null;
-	const raw = f.read(8);
-	f.close();
-	let hex = '';
-	for (let i = 0; i < length(raw); i++)
-		hex += sprintf('%02x', ord(raw, i));
-	return hex;
+// The first line of a failure is the message of die(). The trace follows it.
+function run_cli(cmd) {
+	const fd = popen(`${cmd} 2>&1`);
+	if (!fd)
+		return { code: -1, out: 'Failed to launch uapi-token' };
+	const out = trim(fd.read('all'));
+	return { code: fd.close(), out };
 }
 
-// Run the uapi-token CLI, capturing stdout and stderr separately. The stderr
-// file gets an unpredictable name because root opens it via the shell redirect:
-// a guessable path would let a local user pre-plant a symlink for root to
-// clobber, and would also collide between concurrent calls.
-function run_cli(cmd) {
-	const errfile = `/tmp/.luci-uapi.${random_hex() ?? time()}`;
-	const fd = popen(`${cmd} 2>${shellquote(errfile)}`);
-	if (!fd)
-		return { code: -1, out: '', err: 'Failed to launch uapi-token' };
-	const out = trim(fd.read('all'));
-	const code = fd.close();
-	const err = trim(readfile(errfile) ?? '');
-	unlink(errfile);
-	return { code, out, err };
+// uapi reads a token option only when it is a whole integer.
+function as_int(v) {
+	return match(v, /^-?[0-9]+$/) ? int(v) : null;
 }
 
 // uhttpd forwards a hard-coded header allowlist to mod-ucode handlers, so we
@@ -66,25 +51,21 @@ function read_version() {
 	}
 }
 
-function prefix_entries(uci) {
-	return as_list(uci.get('uhttpd', 'main', 'ucode_prefix'));
-}
-
 function token_sections(uci) {
 	const tokens = [];
 	const now = time();
 	uci.foreach('uapi', 'token', (s) => {
-		const expires_at = s.expires_at ? +s.expires_at : null;
+		const expires_at = as_int(s.expires_at);
 		push(tokens, {
 			name: s['.name'],
 			scopes: as_list(s.scopes),
 			expires_at,
 			expired: (expires_at != null) ? (expires_at <= now) : false,
 			allowed_cidrs: as_list(s.allowed_cidrs),
-			last_used_at: s.last_used_at ? +s.last_used_at : null,
+			last_used_at: as_int(s.last_used_at),
 			last_used_ip: s.last_used_ip ?? null,
-			rate: s.rate ? +s.rate : null,
-			burst: s.burst ? +s.burst : null
+			rate: as_int(s.rate),
+			burst: as_int(s.burst)
 		});
 	});
 	return tokens;
@@ -94,9 +75,8 @@ const methods = {
 	get_status: {
 		call: function() {
 			const uci = cursor();
-			const entries = prefix_entries(uci);
 			let api_major = null;
-			for (let e in entries) {
+			for (let e in as_list(uci.get('uhttpd', 'main', 'ucode_prefix'))) {
 				const m = match(e, PREFIX_RE);
 				if (m) { api_major = m[1]; break; }
 			}
@@ -105,7 +85,6 @@ const methods = {
 				version: read_version(),
 				wired: (api_major != null),
 				api_major,
-				prefix_entries: entries,
 				token_count: length(token_sections(uci)),
 				insecure: !!stat(INSECURE_MARKER),
 				https_listen: as_list(uci.get('uhttpd', 'main', 'listen_https'))
@@ -153,8 +132,7 @@ const methods = {
 			expires_in_seconds: 0,
 			allowed_cidrs: [],
 			rate: 0,
-			burst: 0,
-			force: false
+			burst: 0
 		},
 		call: function(req) {
 			const name = req.args?.name;
@@ -177,13 +155,15 @@ const methods = {
 			if (expires > 0) cmd += ` --expires-in ${shellquote(expires)}`;
 			if (rate > 0) cmd += ` --rate ${shellquote(rate)}`;
 			if (burst > 0) cmd += ` --burst ${shellquote(burst)}`;
-			if (req.args?.force) cmd += ' --force';
 
 			const r = run_cli(cmd);
-			if (r.code != 0 || !length(r.out))
-				return { error: length(r.err) ? r.err : `uapi-token exited ${r.code}` };
+			// The bearer is 32 hex digits on its own line. uapi before 3.2.0 does not
+			// flush it, so the message on stderr can come first.
+			const bearer = match(r.out, /^[0-9a-f]{32}$/);
+			if (r.code != 0 || !bearer)
+				return { error: split(r.out, '\n')[0] || `uapi-token exited ${r.code}` };
 
-			return { bearer: r.out, name };
+			return { bearer: bearer[0], name };
 		}
 	},
 
@@ -196,7 +176,7 @@ const methods = {
 
 			const r = run_cli(`${TOKEN_CLI} revoke ${shellquote(name)}`);
 			if (r.code != 0)
-				return { error: length(r.err) ? r.err : `uapi-token exited ${r.code}` };
+				return { error: split(r.out, '\n')[0] || `uapi-token exited ${r.code}` };
 			return { result: 'OK' };
 		}
 	},

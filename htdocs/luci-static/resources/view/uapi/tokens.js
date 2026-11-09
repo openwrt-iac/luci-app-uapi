@@ -13,7 +13,7 @@ const callListTokens = rpc.declare({
 const callCreateToken = rpc.declare({
 	object: 'luci.uapi',
 	method: 'create_token',
-	params: [ 'name', 'scopes', 'expires_in_seconds', 'allowed_cidrs', 'rate', 'burst', 'force' ]
+	params: [ 'name', 'scopes', 'expires_in_seconds', 'allowed_cidrs', 'rate', 'burst' ]
 });
 
 const callRevokeToken = rpc.declare({
@@ -51,9 +51,12 @@ return view.extend({
 					'class': 'btn cbi-button-negative',
 					'click': ui.createHandlerFn(this, function () {
 						return callRevokeToken(name).then(function (res) {
-							ui.hideModal();
 							if (res && res.error)
 								ui.addNotification(null, E('p', {}, [ res.error ]), 'error');
+						}).catch(function (e) {
+							ui.addNotification(null, E('p', {}, [ _('Token revocation failed: %s').format(e) ]), 'error');
+						}).then(function () {
+							ui.hideModal();
 							return self.refresh();
 						});
 					})
@@ -63,22 +66,27 @@ return view.extend({
 	},
 
 	showBearer: function (name, bearer) {
+		const field = E('textarea', {
+			'readonly': 'readonly',
+			'rows': 2,
+			'wrap': 'off',
+			'style': 'width:100%;font-family:monospace',
+			'click': function (ev) { ev.target.select(); }
+		}, [ bearer ]);
+
 		ui.showModal(_('Token created'), [
 			E('p', {}, _('Token <strong>%h</strong> was created. Copy the bearer value now: it is shown only once and cannot be retrieved again.').format(name)),
-			E('div', { 'class': 'cbi-section' }, [
-				E('textarea', {
-					'readonly': 'readonly',
-					'rows': 2,
-					'wrap': 'off',
-					'style': 'width:100%;font-family:monospace',
-					'click': function (ev) { ev.target.select(); }
-				}, [ bearer ])
-			]),
+			E('div', { 'class': 'cbi-section' }, [ field ]),
 			E('div', { 'class': 'right' }, [
 				E('button', {
 					'class': 'btn cbi-button-action',
 					'click': function () {
-						navigator.clipboard && navigator.clipboard.writeText(bearer);
+						// navigator.clipboard exists only on HTTPS and localhost.
+						field.select();
+						if (navigator.clipboard)
+							navigator.clipboard.writeText(bearer);
+						else
+							document.execCommand('copy');
 					}
 				}, [ _('Copy') ]),
 				' ',
@@ -223,7 +231,7 @@ return view.extend({
 						const rate = parseInt(rateEl.value, 10) || 0;
 						const burst = parseInt(burstEl.value, 10) || 0;
 
-						return callCreateToken(name, scopes, expires, cidrs, rate, burst, false).then(function (res) {
+						return callCreateToken(name, scopes, expires, cidrs, rate, burst).then(function (res) {
 							if (res && res.error) {
 								ui.addNotification(null, E('p', {}, [ res.error ]), 'error');
 								return;

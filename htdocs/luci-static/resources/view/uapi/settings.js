@@ -1,8 +1,19 @@
 'use strict';
 'require view';
 'require form';
+'require uci';
 
 return view.extend({
+	// The form needs a section to show its options. The section is saved only
+	// with the form.
+	load: function () {
+		return uci.load('uapi').then(function () {
+			for (let type of [ 'logging', 'ratelimit' ])
+				if (!uci.sections('uapi', type).length)
+					uci.add('uapi', type);
+		});
+	},
+
 	render: function () {
 		let m, s, o;
 

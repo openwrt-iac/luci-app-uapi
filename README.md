@@ -39,8 +39,6 @@ OpenWrt 25.12.5 with uapi 3.1.0 and three example tokens.
   state, shells out to the `uapi-token` CLI, toggles the insecure marker.
 - `root/usr/share/rpcd/acl.d/luci-app-uapi.json` -- ACLs for the above.
 - `root/usr/share/luci/menu.d/luci-app-uapi.json` -- menu entries.
-- `root/etc/uci-defaults/40_luci-uapi` -- ensures the optional `logging` and
-  `ratelimit` sections exist so the Settings form has something to render.
 
 ## Build
 
