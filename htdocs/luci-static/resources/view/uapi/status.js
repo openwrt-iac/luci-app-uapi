@@ -58,6 +58,9 @@ return view.extend({
 				return callSetInsecure(enable).then(function (res) {
 					if (res && res.error)
 						ui.addNotification(null, E('p', {}, [ res.error ]), 'error');
+				}).catch(function (e) {
+					ui.addNotification(null, E('p', {}, [ _('Failed to change the insecure marker: %s').format(e) ]), 'error');
+				}).then(function () {
 					return self.refresh();
 				});
 			})

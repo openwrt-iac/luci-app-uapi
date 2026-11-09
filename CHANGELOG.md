@@ -9,8 +9,29 @@ never because uapi was bumped. See README "Versioning".
 
 ## [Unreleased]
 
+### Changed
+
+- The Settings page adds a missing `logging` or `ratelimit` section when it
+  loads, and the section is saved with the form. The `40_luci-uapi` uci-defaults
+  script is removed: it ran only at install, so the page showed no option when
+  the sections were deleted later.
+- The backend reads the output of `uapi-token` through one pipe, and writes no
+  temporary file to `/tmp`. An error shows only the message of `uapi-token`,
+  without the ucode stack trace that followed it.
+- The rpcd plugin is installed `0644` without a shebang: rpcd loads it and never
+  runs it. The unused `force` argument of `create_token` and the unused
+  `prefix_entries` field of `get_status` are removed.
+
 ### Fixed
 
+- The Copy button of the "Token created" dialog works over plain HTTP. Browsers
+  give `navigator.clipboard` only to HTTPS and localhost pages, so the button did
+  nothing there. It now selects the bearer, and it copies with the older copy
+  command when the clipboard API is missing.
+- A failed revoke call or a failed change of the insecure marker shows an error.
+  Before, the revoke dialog stayed open with no message.
+- The token list reads `expires_at`, `last_used_at`, `rate` and `burst` as uapi
+  reads them: a value that is not a whole integer reads as unset.
 - Sentences that wrapped a token name or an error are now one translatable string
   with a placeholder, so a translation can put the name or the error where its
   language needs it. Before, translators got fragments such as `? Any client using
