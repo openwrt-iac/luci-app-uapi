@@ -9,6 +9,10 @@ never because uapi was bumped. See README "Versioning".
 
 ## [Unreleased]
 
+## [1.2.0]
+
+Compatible with uapi 2.x, 3.x and 4.x.
+
 ### Changed
 
 - The Settings page adds a missing `logging` or `ratelimit` section when it
