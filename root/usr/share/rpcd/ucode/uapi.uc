@@ -11,7 +11,12 @@ const INSECURE_MARKER = '/etc/uapi.insecure';
 // (/api/v2 for uapi 2.x, /api/v3 for 3.x), so match the major rather than a
 // literal string: this reports the actual mount instead of breaking on upgrade.
 const PREFIX_RE = /^\/api\/(v[0-9]+)=\/usr\/share\/uapi\/main\.uc$/;
-const NAME_RE = /^[A-Za-z0-9_]+$/;
+
+// ucode 8a8b4d12a8, in OpenWrt main but not in 25.12, inverted the /s flag: without
+// it, ^ and $ also match at each newline, so the anchors alone let "a\nb" through.
+function valid_name(n) {
+	return type(n) == 'string' && index(n, '\n') < 0 && match(n, /^[A-Za-z0-9_]+$/) != null;
+}
 
 function shellquote(s) {
 	return "'" + replace(`${s}`, "'", "'\\''") + "'";
@@ -144,7 +149,7 @@ const methods = {
 			const rate = +req.args?.rate;
 			const burst = +req.args?.burst;
 
-			if (!name || !match(name, NAME_RE))
+			if (!valid_name(name))
 				return { error: 'Invalid name: must match [A-Za-z0-9_]+ (use underscores, not hyphens)' };
 			if (!length(scopes))
 				return { error: 'At least one scope is required' };
@@ -159,11 +164,11 @@ const methods = {
 			const r = run_cli(cmd);
 			// The bearer is 32 hex digits on its own line. uapi before 3.2.0 does not
 			// flush it, so the message on stderr can come first.
-			const bearer = match(r.out, /^[0-9a-f]{32}$/);
+			const bearer = filter(split(r.out, '\n'), (l) => match(l, /^[0-9a-f]{32}$/))[0];
 			if (r.code != 0 || !bearer)
 				return { error: split(r.out, '\n')[0] || `uapi-token exited ${r.code}` };
 
-			return { bearer: bearer[0], name };
+			return { bearer, name };
 		}
 	},
 
@@ -171,7 +176,7 @@ const methods = {
 		args: { name: 'string' },
 		call: function(req) {
 			const name = req.args?.name;
-			if (!name || !match(name, NAME_RE))
+			if (!valid_name(name))
 				return { error: 'Invalid token name' };
 
 			const r = run_cli(`${TOKEN_CLI} revoke ${shellquote(name)}`);

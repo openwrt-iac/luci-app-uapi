@@ -24,6 +24,11 @@ never because uapi was bumped. See README "Versioning".
 
 ### Fixed
 
+- On OpenWrt main, a token name with a newline passed the name check of the app,
+  and `uapi-token` then reported a token that it never wrote. ucode 8a8b4d12a8
+  changed `^` and `$` to also match at a newline, so the app now refuses a
+  newline itself. The check that finds the new bearer in the output of
+  `uapi-token` works with the ucode of OpenWrt 25.12 and of main.
 - The Copy button of the "Token created" dialog works over plain HTTP. Browsers
   give `navigator.clipboard` only to HTTPS and localhost pages, so the button did
   nothing there. It now selects the bearer, and it copies with the older copy
